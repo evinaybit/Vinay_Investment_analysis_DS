@@ -1,0 +1,90 @@
+
+import pandas as pd
+import numpy as np
+ 
+import warnings # To supress errors
+warnings.filterwarnings('ignore')
+
+##########
+# Getting error now and than when reading csv from folder during shift of folder getting error so used web address
+# reading companies as csv address taken from upgrade website page saved, open as txt and searched for companies
+# before text download got address of website
+companies = pd.read_csv(r'https://cdn.upgrad.com/UpGrad/temp/d934844e-5182-4b58-b896-4ba2a499aa57/companies.txt', encoding='ISO-8859-1',sep='\t')
+
+
+############
+
+# reading mapping file as csv important not a comma seprated file structre was reading wrong
+mapping = pd.read_csv(r'https://cdn.upgrad.com/UpGrad/temp/231dc91c-0642-470d-a362-29ddcd7142ce/mapping.csv',encoding='ISO-8859-1')
+
+############
+
+# reading rounds2 file as csv important not a comma seprated file structre was reading wrong
+rounds2 = pd.read_csv(r'https://cdn.upgrad.com/UpGrad/temp/4c3b5ed0-e5dc-4838-89a2-173d8707d857/rounds2.csv',encoding='ISO-8859-1')
+
+#########
+# Understanding data structure from companies CSV
+companies.head()
+
+#############3
+
+# Understanding data structure from mapping CSV
+mapping.head()
+
+##############
+
+# Understanding data structure from rounds2 CSV
+rounds2.head()
+
+##############
+
+#Unique character determination 
+#rounds2['company_permalink']=rounds2[['company_permalink']].applymap(lambda x: x.encode('utf-8').decode('ascii', 'ignore'))
+# Make all charater lower case as python is sensitive to letter case
+rounds2.company_permalink = rounds2.company_permalink.apply(lambda x: x.lower())
+# Determining unique characters means no repetition of similar names
+len(rounds2.company_permalink.unique()) 
+
+######################3
+
+# Unique companies determination companies
+# Make all charater lower case as python is sensitive to letter case
+companies.company_permalink = companies.permalink.apply(lambda x: x.lower())
+# Determining unique characters means no repetition of similar names
+len(companies.permalink.unique())
+
+####################
+
+# Removing the special characters in company_permalink and funding_round_permalink column as during merge special
+# characters appeared
+rounds2['company_permalink']=rounds2[['company_permalink']].applymap(lambda x: x.encode('utf-8').decode('ascii', 'ignore'))
+rounds2['funding_round_permalink']=rounds2[['funding_round_permalink']].applymap(lambda x: x.encode('utf-8').decode('ascii', 'ignore'))
+
+##############################3333
+## Cleaning the name column, assigning the name of the company to the NaN cell, as there is only one and we can get the name from its permalink.
+
+companies.loc[companies['permalink']=='/organization/tell-it-in',['name']]=' '.join(companies[companies['permalink']=='/organization/tell-it-in']['permalink'].str.split('/').tolist()[0][2].split('-'))
+###############
+# Inner merge not possible so merge on left
+master_frame = pd.merge(rounds2,companies, left_on="company_permalink", right_on="permalink", how='left')
+################
+# Answer of total observeation present
+master_frame.shape
+#############
+# Data frame of combined file
+master_frame.head()
+#############3
+round((master_frame.isnull().sum()/len(master_frame.index))*100,2 )
+###############3
+
+# companies status closed to be removed
+master_frame = master_frame[master_frame['status']!='closed']
+#################3
+master_frame.shape
+#############
+# If 'raised_amount_usd' is null, it should be removed as well
+master_frame = master_frame[pd.notnull(master_frame['raised_amount_usd'])]
+###############3
+round((master_frame.isnull().sum()/len(master_frame.index))*100,2)
+##################33
+len(master_frame.name.unique())
